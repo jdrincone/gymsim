@@ -15,6 +15,8 @@ on:
     #                     "*/15" se pasaría. Mantén >= 30 min o haz el repo público.
     - cron: "*/30 * * * *"
   workflow_dispatch: {}   # permite ejecutarlo a mano desde la pestaña Actions
+  push:
+    branches: [main]      # cada push a main dispara un run EN ESE commit (evita correr código viejo)
 
 # No solapar ticks: se ejecutan en serie (el checkpoint es un recurso compartido).
 # (Defensa en profundidad: el propio tick toma un advisory lock en Postgres, así que un
