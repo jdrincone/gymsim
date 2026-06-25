@@ -168,7 +168,11 @@ def collect(engine) -> dict:
 
 
 def render(data: dict) -> str:
-    return HTML_TEMPLATE.replace("__DATA__", json.dumps(data, ensure_ascii=False))
+    """Inyecta los datos y la librería Chart.js INCRUSTADA (sin CDN → funciona offline)."""
+    chartjs = (Path(__file__).resolve().parent / "chart.umd.min.js").read_text(encoding="utf-8")
+    html = HTML_TEMPLATE.replace("__DATA__", json.dumps(data, ensure_ascii=False))
+    html = html.replace("__CHARTJS__", "<script>\n" + chartjs + "\n</script>")
+    return html
 
 
 def main() -> int:
@@ -193,7 +197,7 @@ HTML_TEMPLATE = r"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gym · Dashboard de afluencia y retención</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+__CHARTJS__
 <style>
   :root{--bg:#0f1419;--card:#1a2027;--card2:#222b34;--ink:#e6edf3;--mut:#8b98a5;
         --acc:#3fb950;--acc2:#58a6ff;--warn:#d29922;--bad:#f85149;--grid:#2d3640}
@@ -260,7 +264,7 @@ const D = __DATA__;
 const fmt = n => Number(n).toLocaleString('es-CO');
 const C = {acc:'#3fb950',acc2:'#58a6ff',warn:'#d29922',bad:'#f85149',mut:'#8b98a5',
            pal:['#58a6ff','#3fb950','#d29922','#f85149','#a371f7','#ff7b72','#39c5cf']};
-Chart.defaults.color='#8b98a5'; Chart.defaults.borderColor='#2d3640'; Chart.defaults.font.size=11;
+const HAS_CHART = (typeof Chart !== 'undefined');
 
 document.getElementById('sub').innerHTML =
   `Datos: <b>${D.meta.data_from}</b> → <b>${D.meta.data_to}</b> · `+
@@ -283,6 +287,8 @@ const kpiList = [
 document.getElementById('kpis').innerHTML = kpiList.map(
   ([l,v])=>`<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
 
+if (HAS_CHART) {
+Chart.defaults.color='#8b98a5'; Chart.defaults.borderColor='#2d3640'; Chart.defaults.font.size=11;
 const bar=(id,labels,data,color,label)=>new Chart(document.getElementById(id),{type:'bar',
   data:{labels,datasets:[{label:label||'',data,backgroundColor:color,borderRadius:4}]},
   options:{plugins:{legend:{display:!!label}},scales:{y:{beginAtZero:true,grid:{color:'#2d3640'}},x:{grid:{display:false}}}}});
@@ -319,6 +325,7 @@ new Chart(document.getElementById('c_dev'),{type:'bar',
     {label:'IN',data:ins,backgroundColor:C.acc2,borderRadius:4},
     {label:'OUT',data:outs,backgroundColor:C.warn,borderRadius:4}]},
   options:{scales:{y:{beginAtZero:true,grid:{color:'#2d3640'}},x:{grid:{display:false}}}}});
+}  // fin if(HAS_CHART)
 
 // tabla arquetipo
 const maxV=Math.max(...D.arquetipo.map(r=>r.visitas_media));
