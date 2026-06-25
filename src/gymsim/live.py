@@ -90,23 +90,30 @@ def _run_tick_locked(config, sink, engine, accel, now_real, start_dt) -> dict:
     # cota de avance por tick: el siguiente tick sigue rellenando si quedó atrás
     sim_now = min(sim_now, sim_checkpoint + timedelta(days=MAX_CATCHUP_DAYS))
 
-    inserted = 0
+    events_generated = 0
     if sim_now > sim_checkpoint:
         calendar = make_calendar(config)
         events = events_between(config, members, calendar, sim_checkpoint, sim_now)
         for ev in events:
             sink.emit(ev)
         sink._flush()
-        inserted = len(events)
+        events_generated = len(events)
         with engine.begin() as conn:
             conn.execute(
                 text("UPDATE raw.sim_state SET sim_checkpoint = :s WHERE id = 1"),
                 {"s": sim_now},
             )
 
+    with engine.begin() as conn:
+        total_rows = conn.execute(
+            text("SELECT count(*) FROM raw.access_event_raw")
+        ).scalar_one()
+
     return {
         "sim_from": sim_checkpoint.isoformat(),
         "sim_to": sim_now.isoformat(),
-        "events_inserted": inserted,
+        "events_generated": events_generated,   # eventos generados en la ventana simulada
+        "rows_inserted": sink.inserted_count,    # filas NUEVAS reales en la BD (tras dedup)
+        "total_rows": total_rows,                # total en raw.access_event_raw tras el tick
         "accel": accel,
     }

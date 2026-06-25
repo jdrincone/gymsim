@@ -47,9 +47,10 @@ jobs:
       - name: Tick (insertar eventos hasta ahora)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          # Aceleración: 24 → 1 día simulado por cada hora real. Súbelo para llenar más
-          # rápido, bájalo a 1 para ritmo de vida real. Patrón horario realista en cualquier caso.
-          SIM_ACCEL: "24"
+          # Aceleración: 72 → 3 días simulados por cada hora real (~1.5 días por tick de 30 min).
+          # Súbelo para llenar más rápido, bájalo a 1 para ritmo de vida real.
+          # El log de este paso imprime "rows_inserted": filas NUEVAS reales que entraron en la BD.
+          SIM_ACCEL: "72"
         run: uv run gymsim tick
 
       - name: Transform (raw→staging→curated para analítica)

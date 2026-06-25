@@ -29,6 +29,7 @@ class PostgresSink:
         self._site_id = site_id
         self.batch_size = batch_size
         self._buffer: list[dict] = []
+        self.inserted_count = 0  # filas NUEVAS reales insertadas (excluye las descartadas por dedup)
 
     def open(self) -> None:
         # crea los esquemas (raw/staging/curated) y las tablas
@@ -36,6 +37,16 @@ class PostgresSink:
             for sch in SCHEMAS:
                 conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {sch}"))
         Base.metadata.create_all(self._engine)
+        # columna de hora REAL de llegada (la fila la pone la BD con now() en cada INSERT);
+        # idempotente, para saber qué entró en cada corrida del cron. device_ts/ingested_at son
+        # tiempo SIMULADO; loaded_at es el reloj de pared real.
+        with self._engine.begin() as conn:
+            conn.execute(
+                text(
+                    "ALTER TABLE raw.access_event_raw "
+                    "ADD COLUMN IF NOT EXISTS loaded_at timestamptz DEFAULT now()"
+                )
+            )
         self._write_devices()
 
     def _write_devices(self) -> None:
@@ -103,7 +114,10 @@ class PostgresSink:
             """
         )
         with self._engine.begin() as conn:
-            conn.execute(stmt, self._buffer)
+            result = conn.execute(stmt, self._buffer)
+            # rowcount tras ON CONFLICT DO NOTHING = filas realmente insertadas (sin los duplicados)
+            if result.rowcount and result.rowcount > 0:
+                self.inserted_count += result.rowcount
         self._buffer.clear()
 
     def close(self) -> None:
