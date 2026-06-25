@@ -6,14 +6,15 @@ name: Llenar BD (simulación del gym)
 
 on:
   schedule:
-    # cada 30 min. GitHub puede retrasar el cron; no pasa nada: el siguiente tick rellena
-    # el hueco (la ventana se calcula contra el reloj real, no contra el disparo).
+    # Cada 30 min, en minutos ":07" y ":37" (NO ":00"/":30"). El trigger schedule de GitHub es
+    # "best-effort": se retrasa o se salta en horas de carga, y el peor momento es el inicio de
+    # cada hora. Usar minutos raros reduce mucho los saltos. Si igual se atrasa, no pasa nada:
+    # el siguiente tick rellena el hueco (la ventana se calcula contra el reloj real).
     #
     # Minutos de Actions (free tier):
-    #   - Repo PÚBLICO  → ilimitado: puedes bajar a "*/15" o "*/10" sin costo.
-    #   - Repo PRIVADO  → 2.000 min/mes. A ~1.5 min por run, "*/30" (~1.440 runs/mes) cabe;
-    #                     "*/15" se pasaría. Mantén >= 30 min o haz el repo público.
-    - cron: "*/30 * * * *"
+    #   - Repo PÚBLICO  → ilimitado: puedes bajar a "7,22,37,52" (cada 15 min) sin costo.
+    #   - Repo PRIVADO  → 2.000 min/mes. A ~1.5 min por run, cada 30 min (~1.440 runs/mes) cabe.
+    - cron: "7,37 * * * *"
   workflow_dispatch: {}   # permite ejecutarlo a mano desde la pestaña Actions
   push:
     branches: [main]      # cada push a main dispara un run EN ESE commit (evita correr código viejo)
