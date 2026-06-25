@@ -20,20 +20,15 @@ def _normalize_dsn(dsn: str) -> str:
 
 
 def _split_statements(sql: str) -> list[str]:
-    """Parte un script en sentencias por ';'.
+    """Parte un script en sentencias ejecutables por ';'.
 
-    psycopg ejecuta una sola sentencia por ``execute``; los .sql de este repo no contienen ';'
-    dentro de literales, así que un split por ';' es suficiente y robusto. Se descartan los
-    fragmentos que solo son comentarios o espacios (p. ej. el comentario final tras el último ';').
+    psycopg ejecuta una sola sentencia por ``execute``. Primero se **quitan los comentarios de
+    línea** (``-- ... fin de línea``): así un ';' que viva dentro de un comentario no parte la
+    sentencia (los .sql de este repo no contienen ';' dentro de literales). Se descartan los
+    fragmentos vacíos (p. ej. lo que quede tras el último ';').
     """
-    out: list[str] = []
-    for chunk in sql.split(";"):
-        body = "\n".join(
-            ln for ln in chunk.splitlines() if not ln.strip().startswith("--")
-        ).strip()
-        if body:
-            out.append(chunk.strip())
-    return out
+    no_comments = "\n".join(line.split("--", 1)[0] for line in sql.splitlines())
+    return [stmt.strip() for stmt in no_comments.split(";") if stmt.strip()]
 
 
 def run_transforms(dsn: str, transforms_dir: str | Path = "sql/transforms") -> dict:
