@@ -86,6 +86,15 @@ uv run gymsim transform
 Aplica en orden los `.sql` del directorio, **en una sola transacción** (o queda todo consistente
 o no cambia nada) y es idempotente (cada SQL hace `TRUNCATE + INSERT`).
 
+## Dashboard de monitoreo y negocio
+Genera un `dashboard.html` autocontenido (gráficos con Chart.js) a partir de la BD — afluencia
+por hora/día, mapa de calor, tendencia semanal, segmentación por churn, validación contra el
+ground-truth y calidad de datos. Todos los números salen de consultas reales (nada inventado):
+```bash
+uv run python scripts/build_dashboard.py --out dashboard.html
+```
+Vuelve a correrlo para refrescar el tablero a medida que la BD crece. Ábrelo en el navegador.
+
 ## Tests
 ```bash
 uv run --extra dev pytest -q

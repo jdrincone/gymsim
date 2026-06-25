@@ -6,6 +6,8 @@ __pycache__/
 data/*.jsonl
 data/*.parquet
 data/*.db
+dashboard.html
+.env.example.local
 .pytest_cache/
 .ruff_cache/
 # NOTA: uv.lock SÍ se versiona (reproducibilidad). No lo ignores.
