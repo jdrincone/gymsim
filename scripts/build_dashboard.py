@@ -315,7 +315,7 @@ new Chart(document.getElementById('c_cal'),{type:'bar',
   data:{labels:['Válidos','Duplicados','Denegados','Sospechosos'],
     datasets:[{data:[cal.validos,cal.duplicados,cal.denegados,cal.sospechosos],
       backgroundColor:[C.acc,C.warn,C.bad,'#a371f7'],borderRadius:4}]},
-  options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#2d3640'}},x:{grid:{display:false}}}});
+  options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#2d3640'}},x:{grid:{display:false}}}}});
 
 const dev=D.dispositivo, devIds=[...new Set(dev.map(d=>d.device))];
 const ins=devIds.map(id=>(dev.find(d=>d.device===id&&d.direction==='IN')||{}).eventos||0);
