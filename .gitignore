@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.env
+data/*.jsonl
+data/*.parquet
+data/*.db
+.pytest_cache/
+.ruff_cache/
+# NOTA: uv.lock SÍ se versiona (reproducibilidad). No lo ignores.

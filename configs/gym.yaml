@@ -1,0 +1,69 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Configuración del gimnasio (primera configuración concreta del motor genérico).
+# Para otro negocio: copia este archivo y cambia perfiles, arquetipos y dispositivos.
+# ════════════════════════════════════════════════════════════════════════════
+site_id: gym-01
+seed: 42
+
+time:
+  start_date: 2025-01-01
+  horizon_days: 180
+  weekday_hours: [5, 22]    # Lun-Vie: 5:00–22:00
+  weekend_hours: [7, 15]    # Sáb/Dom/Festivo: 7:00–15:00
+  country: CO               # festivos de Colombia (Ley Emiliani); cierre total 1-ene, 25-dic, V. Santo
+  daily_noise_sigma: 0.18   # azar diario (ε log-normal de la intensidad de llegadas)
+
+population:
+  size: 1200                # cohorte inicial activa
+  monthly_new_members: 40   # altas por mes a lo largo del horizonte
+  archetype_mix:
+    constante: 0.30
+    casual: 0.25
+    esporadico: 0.15
+    ramp_up: 0.08
+    decadente: 0.12
+    fantasma: 0.05
+    nuevo: 0.05
+
+arrivals:
+  # Perfil horario Lun-Vie (24 pesos): bimodal, pico mañana y tarde, 0 fuera de 5-22.
+  weekday_hourly: [0,0,0,0,0,3,7,9,7,4,3,3, 4,3,3,4,6,9,10,8,5,3,0,0]
+  # Perfil horario fin de semana/festivo (24 pesos): 7-15, pico de media mañana.
+  weekend_hourly: [0,0,0,0,0,0,0,5,8,10,9,7, 5,3,2,0,0,0,0,0,0,0,0,0]
+  # Preferencia por día de semana (lun..dom).
+  weekday_profile: [1.15, 1.15, 1.15, 1.10, 0.95, 0.85, 0.65]
+  # Índice estacional por mes (ene..dic): pico de propósitos de año nuevo, bajón vacacional.
+  monthly_profile: [1.35, 1.10, 1.00, 1.00, 1.00, 0.90, 0.80, 0.80, 1.10, 1.05, 1.00, 0.85]
+
+social:
+  group_fraction: 0.25      # fracción de socios en algún grupo (parejas/amigos)
+  co_attendance_prob: 0.6   # afinidad de horarios dentro del grupo (co-asistencia)
+  max_group_size: 4
+
+session:
+  duration_median_min: 60   # mediana de duración de sesión (min)
+  duration_sigma: 0.4       # sigma log-normal
+
+noise:
+  duplicate_rate: 0.03         # doble lectura (rebote del lector)
+  reentry_prob: 0.12           # salir y volver (llamada / comprar agua)
+  reentry_gap_min_mean: 6.0    # media del gap de re-entrada (min)
+  clock_drift_sec: 30.0        # drift de reloj por dispositivo
+  missing_mark_prob: 0.04      # marcaje faltante (tailgating)
+  denied_rate: 0.02            # accesos denegados (no son visita)
+  shared_credential_fraction: 0.01  # credenciales compartidas (fraude/préstamo)
+  late_delivery_prob: 0.05     # eventos tardíos / fuera de orden
+
+devices:
+  - device_id: reg-entrada-1
+    door: entrada_principal
+    direction_mode: BIDI
+    antipassback: true
+  - device_id: reg-entrada-2
+    door: entrada_principal
+    direction_mode: BIDI
+    antipassback: false
+  - device_id: reg-salida-1
+    door: salida
+    direction_mode: OUT_ONLY
+    antipassback: false

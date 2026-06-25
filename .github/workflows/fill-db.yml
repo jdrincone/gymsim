@@ -1,0 +1,73 @@
+name: Llenar BD (simulación del gym)
+
+# La simulación "vive sola": GitHub Actions dispara un tick cada N minutos y cada tick
+# inserta en Supabase los eventos ocurridos desde el último checkpoint. Gratis, sin servidor.
+# Ver memoria self-living-free-fill y README (sección "vivir solo").
+
+on:
+  schedule:
+    # cada 30 min. GitHub puede retrasar el cron; no pasa nada: el siguiente tick rellena
+    # el hueco (la ventana se calcula contra el reloj real, no contra el disparo).
+    #
+    # Minutos de Actions (free tier):
+    #   - Repo PÚBLICO  → ilimitado: puedes bajar a "*/15" o "*/10" sin costo.
+    #   - Repo PRIVADO  → 2.000 min/mes. A ~1.5 min por run, "*/30" (~1.440 runs/mes) cabe;
+    #                     "*/15" se pasaría. Mantén >= 30 min o haz el repo público.
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}   # permite ejecutarlo a mano desde la pestaña Actions
+
+# No solapar ticks: se ejecutan en serie (el checkpoint es un recurso compartido).
+# (Defensa en profundidad: el propio tick toma un advisory lock en Postgres, así que un
+#  workflow_dispatch manual tampoco puede pisar el checkpoint del cron.)
+concurrency:
+  group: fill-db
+  cancel-in-progress: false
+
+# Permite que el paso de alerta abra/comente un issue si el llenado falla.
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sincronizar dependencias
+        run: uv sync
+
+      - name: Tick (insertar eventos hasta ahora)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Aceleración: 24 → 1 día simulado por cada hora real. Súbelo para llenar más
+          # rápido, bájalo a 1 para ritmo de vida real. Patrón horario realista en cualquier caso.
+          SIM_ACCEL: "24"
+        run: uv run gymsim tick
+
+      - name: Transform (raw→staging→curated para analítica)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        # Idempotente: reconstruye la capa curated que consume la analítica. El raw ya quedó
+        # commiteado por el tick; si esto falla, el siguiente run lo vuelve a aplicar.
+        run: uv run gymsim transform
+
+      - name: Avisar si algo falló
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Abre un issue (o comenta el existente) para que un fallo no pase desapercibido.
+        run: |
+          url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          existing=$(gh issue list --state open --search "Fallo en el llenado de la BD in:title" \
+            --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Otro fallo del llenado. Run: $url"
+          else
+            gh issue create --title "Fallo en el llenado de la BD" \
+              --body "El workflow de llenado falló. Revisa el run: $url"
+          fi
